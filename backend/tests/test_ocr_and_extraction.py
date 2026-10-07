@@ -15,6 +15,7 @@ from app.services.extraction.extractors import (
     SalarySlipExtractor,
 )
 from app.services.financial.service import FinancialAnalysisService
+from app.services.key_value_model.heuristic import HeuristicKeyValueModel
 from app.services.ocr.base import OCRProvider
 from app.services.ocr.mock import MockOCRProvider
 from app.services.ocr.resilient import ResilientOCRProvider
@@ -165,6 +166,32 @@ def test_bank_statement_extraction_with_regex_aliases() -> None:
     assert extracted["account_number"] == "9988776655"
     assert extracted["account_holder"] == "John Holder"
     assert len(extracted["transactions"]) == 1
+
+
+def test_key_value_model_converts_text_and_structured_fields() -> None:
+    model = HeuristicKeyValueModel()
+
+    result = model.transform(
+        DocumentType.BANK_STATEMENT,
+        raw_text=(
+            "BANK MUSCAT\n"
+            "SME Current Account Statement\n"
+            "Statement Date: 30 Jun 2026\n"
+            "CRN\n"
+            "12345678\n"
+        ),
+        extracted_data={
+            "bank_name": "Bank Muscat",
+            "account_type": "SME Current Account Statement",
+            "opening_balance": "50000.00",
+            "transactions": [],
+        },
+    )
+
+    assert result["key_values"]["Bank Muscat"] == "SME Current Account Statement"
+    assert result["key_values"]["Statement Date"] == "30 Jun 2026"
+    assert result["key_values"]["CRN"] == "12345678"
+    assert result["key_values"]["Opening Balance"] == "50000.00"
 
 
 def test_bank_statement_extraction_with_multiline_ocr_layout() -> None:

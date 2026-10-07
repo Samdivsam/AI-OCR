@@ -4,6 +4,25 @@ type Props = {
   extraction: Record<string, unknown>;
 };
 
+const META_KEYS = new Set(["key_values", "ocr_text_preview", "raw_text_preview", "extraction_warning", "structured_fields_detected"]);
+
+function isScalarValue(value: unknown): value is string | number | boolean | null | undefined {
+  return value === null || value === undefined || ["string", "number", "boolean"].includes(typeof value);
+}
+
+function shouldRenderField(key: string, value: unknown, hasKeyValues: boolean) {
+  if (key === "key_values") {
+    return false;
+  }
+  if (!hasKeyValues) {
+    return true;
+  }
+  if (META_KEYS.has(key) || key === "transactions") {
+    return true;
+  }
+  return !isScalarValue(value);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -106,13 +125,17 @@ function renderValue(key: string, value: unknown): React.ReactNode {
 }
 
 export function FieldList({ extraction }: Props) {
+  const keyValueRecord = isRecord(extraction["key_values"]) ? extraction["key_values"] : null;
+  const keyValueEntries = keyValueRecord ? Object.entries(keyValueRecord) : [];
+  const hasKeyValues = keyValueEntries.length > 0;
+
   return (
     <div className="grid gap-4">
-      {typeof extraction.key_values === "object" && extraction.key_values !== null && Object.keys(extraction.key_values as Record<string, unknown>).length > 0 && (
+      {hasKeyValues && (
         <div className="rounded-xl bg-blue-50 p-4 ring-1 ring-blue-200">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">OCR Detected Fields</p>
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">Structured Key-Value View</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {Object.entries(extraction.key_values as Record<string, unknown>).map(([key, value]) => (
+            {keyValueEntries.map(([key, value]) => (
               <div key={key} className="rounded-lg bg-white p-3">
                 <p className="text-xs font-medium text-slate-500">{key}</p>
                 <p className="mt-1 text-sm font-medium text-slate-900">{String(value)}</p>
@@ -121,7 +144,9 @@ export function FieldList({ extraction }: Props) {
           </div>
         </div>
       )}
-      {Object.entries(extraction).filter(([key]) => key !== "key_values").map(([key, value]) => (
+      {Object.entries(extraction)
+        .filter(([key, value]) => shouldRenderField(key, value, hasKeyValues))
+        .map(([key, value]) => (
         <div key={key} className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
           <p className="text-sm font-medium text-slate-500">{prettifyKey(key)}</p>
           <div className="mt-2 text-sm text-slate-900">{renderValue(key, value)}</div>

@@ -11,6 +11,7 @@ from app.schemas.document import DashboardSummary, DocumentListResponse, Documen
 from app.services.classification.classifier import DocumentClassifier
 from app.services.documents.service import DocumentService
 from app.services.extraction.registry import ExtractorRegistry
+from app.services.key_value_model.factory import KeyValueModelFactory
 from app.services.ocr.factory import OCRProviderFactory
 from app.services.validation.normalization import DataNormalizationService
 
@@ -24,6 +25,7 @@ def build_document_service(session: DBSession, settings: Settings) -> DocumentSe
         ocr_provider=OCRProviderFactory.create(settings),
         classifier=DocumentClassifier(),
         extractor_registry=ExtractorRegistry(),
+        key_value_model=KeyValueModelFactory.create(settings),
         normalizer=DataNormalizationService(),
     )
 

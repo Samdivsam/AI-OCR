@@ -70,6 +70,7 @@ async def test_valid_pdf_upload(client, sample_pdf_bytes) -> None:
     assert response.status_code == 201
     assert response.json()["status"] == "COMPLETED"
     assert response.json()["extraction"]["ocr_text_preview"]
+    assert response.json()["extraction"]["key_values"]["Bank Name"] == "Sample Bank"
 
 
 @pytest.mark.asyncio

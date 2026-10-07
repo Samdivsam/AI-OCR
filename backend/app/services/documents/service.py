@@ -15,6 +15,7 @@ from app.schemas.common import DocumentStatus, DocumentType
 from app.schemas.document import DashboardSummary, DocumentListResponse, DocumentResponse, ExtractionResponse
 from app.services.classification.classifier import DocumentClassifier
 from app.services.extraction.registry import ExtractorRegistry
+from app.services.key_value_model.base import KeyValueModel
 from app.services.ocr.base import OCRProvider
 from app.services.validation.normalization import DataNormalizationService
 from app.utils.file_validation import validate_upload
@@ -28,6 +29,7 @@ class DocumentService:
         ocr_provider: OCRProvider,
         classifier: DocumentClassifier,
         extractor_registry: ExtractorRegistry,
+        key_value_model: KeyValueModel,
         normalizer: DataNormalizationService,
     ) -> None:
         self.session = session
@@ -35,6 +37,7 @@ class DocumentService:
         self.ocr_provider = ocr_provider
         self.classifier = classifier
         self.extractor_registry = extractor_registry
+        self.key_value_model = key_value_model
         self.normalizer = normalizer
 
     async def process_upload(
@@ -63,7 +66,9 @@ class DocumentService:
                 raise ProcessingError("INVALID_OCR_RESPONSE", "Unable to extract readable text from the document.")
             document_type = requested_document_type or self.classifier.classify(ocr_result)
             extractor = self.extractor_registry.get(document_type)
-            extracted_data = self.normalizer.normalize(extractor.extract(ocr_result))
+            extracted_data = extractor.extract(ocr_result)
+            extracted_data = self.key_value_model.transform(document_type, ocr_result.text, extracted_data)
+            extracted_data = self.normalizer.normalize(extracted_data)
             extracted_data = self._enrich_extraction_result(extracted_data, ocr_result.text)
 
             document.document_type = document_type.value
@@ -100,7 +105,7 @@ class DocumentService:
         structured_count = sum(
             1
             for key, value in extracted_data.items()
-            if key != "raw_text_preview" and self._has_meaningful_value(value)
+            if key not in {"raw_text_preview", "key_values"} and self._has_meaningful_value(value)
         )
         enriched["structured_fields_detected"] = structured_count
 

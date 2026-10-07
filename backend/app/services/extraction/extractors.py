@@ -14,7 +14,6 @@ from app.services.extraction.helpers import (
     extract_first_date,
     extract_labeled_value,
     extract_regex_value,
-    extract_key_value_pairs,
     normalize_ocr_text,
     normalize_gender,
     parse_date,
@@ -91,7 +90,6 @@ class IDCardExtractor(DocumentExtractor):
             address=extract_labeled_value(ocr_result.text, ADDRESS_ALIASES, multiline=True, stop_aliases=COMMON_STOP_ALIASES),
             issue_date=parse_date(extract_labeled_value(ocr_result.text, ISSUE_DATE_ALIASES)) or (dates[1] if len(dates) > 1 else None),
             expiry_date=parse_date(extract_labeled_value(ocr_result.text, EXPIRY_DATE_ALIASES)) or (dates[-1] if len(dates) > 2 else None),
-            key_values=extract_key_value_pairs(ocr_result.text),
         )
         return model.model_dump(mode="json")
 
@@ -112,7 +110,6 @@ class PassportExtractor(DocumentExtractor):
             date_of_expiry=parse_date(extract_labeled_value(ocr_result.text, EXPIRY_DATE_ALIASES)) or (dates[-1] if len(dates) > 2 else None),
             place_of_birth=extract_labeled_value(ocr_result.text, [r"place\s*of\s*birth", r"birth\s*place"]),
             place_of_issue=extract_labeled_value(ocr_result.text, [r"place\s*of\s*issue", r"issue\s*place"]),
-            key_values=extract_key_value_pairs(ocr_result.text),
         )
         return model.model_dump(mode="json")
 
@@ -136,7 +133,6 @@ class DrivingLicenseExtractor(DocumentExtractor):
             issue_date=parse_date(extract_labeled_value(ocr_result.text, ISSUE_DATE_ALIASES)) or (dates[1] if len(dates) > 1 else None),
             expiry_date=parse_date(extract_labeled_value(ocr_result.text, EXPIRY_DATE_ALIASES)) or (dates[-1] if len(dates) > 2 else None),
             vehicle_classes=[item.strip() for item in vehicle_classes.split(",")] if vehicle_classes else [],
-            key_values=extract_key_value_pairs(ocr_result.text),
         )
         return model.model_dump(mode="json")
 
@@ -155,7 +151,6 @@ class SalarySlipExtractor(DocumentExtractor):
             net_salary=parse_decimal(extract_labeled_value(ocr_result.text, [r"net\s*salary", r"net\s*pay", r"take\s*home"])),
             tax=parse_decimal(extract_labeled_value(ocr_result.text, [r"tax", r"income\s*tax", r"tds"])),
             other_deductions=parse_decimal(extract_labeled_value(ocr_result.text, [r"other\s*deductions?", r"misc(?:ellaneous)?\s*deductions?"])),
-            key_values=extract_key_value_pairs(ocr_result.text),
         )
         return model.model_dump(mode="json")
 
@@ -212,7 +207,6 @@ class BankStatementExtractor(DocumentExtractor):
             or inferred_opening_balance,
             closing_balance=closing_balance,
             transactions=transactions,
-            key_values=extract_key_value_pairs(normalized_text),
         )
         return model.model_dump(mode="json")
 
